@@ -1,16 +1,7 @@
-# from pyquil import Program, get_qc
-# from pyquil.gates import *
-# from pyquil.quilbase import DefPermutationGate
-# from pyquil.quil import DefGate
-# from pyquil.api import local_forest_runtime
-
-
 from qiskit import *
 from qiskit.quantum_info.operators import Operator
-import numpy as np
-import matplotlib.pyplot as plt
-
 from math import floor, pi, sqrt
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -37,13 +28,10 @@ def initialize(n):
     Note: apply_H isn't called because it is actually more efficient to initialize in one loop as opposed to 2.
     """
     # apply H to first n qubits and X H to the last qubit (ancilla qubit)
-    quantum_register = QuantumRegister(n + 1)
+    quantum_register = QuantumRegister(n)
     classical_register = ClassicalRegister(n)
     quantum_circuit = QuantumCircuit(quantum_register, classical_register)
-    # In qiskit, all quantum registers start in the low energy |0> state so we must apply an x gate to our helper bit
-    # in order to put it in the state |1>
-    quantum_circuit.x(quantum_register[-1])
-    for index in range(n + 1):
+    for index in range(n):
         quantum_circuit.h(quantum_register[index])
     quantum_circuit.barrier()
     return quantum_circuit, quantum_register, classical_register
@@ -92,7 +80,7 @@ def get_Zf(f, n):
     return Operator(gate)
 
 
-def grovers_algorithm(f, n, shots=1024):
+def grovers_algorithm(f, n, shots=1024, threshold=0.9):
     """
     This function is intended to determine if there exists an x in {0,1}^n s.t. f(x) = 1 for a given function f s.t.
         f:{0,1}^n -> {0,1}. The algorithm first constructs Zf, -Z0 gates, initializes with Hanamard matrices, and
@@ -120,62 +108,58 @@ def grovers_algorithm(f, n, shots=1024):
     # Define and generate Zf gate
     zf_gate = get_Zf(f, n)
 
-    # TODO: remove this drawing
-    quantum_circuit.draw('mpl')
-    plt.show()
-
     # Determine the number of times to apply G
-    iteration_count = floor(pi / 4 * sqrt(n))
+    iteration_count = floor(pi / 4 * sqrt(2 ** n))
     # Apply G iteration_count times
     for i in range(iteration_count):
         # Apply Zf
         quantum_circuit.unitary(zf_gate, rv_qr)
         # Apply H to all qubits
-        for index in range(n + 1):
+        for index in range(n):
             quantum_circuit.h(quantum_register[index])
         # Apply -Z0
         quantum_circuit.unitary(z0_gate, rv_qr)
         # Apply H to all qubits
-        for index in range(n + 1):
+        for index in range(n):
             quantum_circuit.h(quantum_register[index])
         quantum_circuit.barrier()
-
-    # TODO: remove this drawing
-    quantum_circuit.draw('mpl')
-    plt.show()
 
     # Run simulator
     quantum_simulator = Aer.get_backend('qasm_simulator')
     quantum_circuit.measure(quantum_register[0:n], classical_register)
+
+    # Display circuit diagram
     quantum_circuit.draw('mpl')
     plt.show()
 
-    # Evaluate the job results
+    # Execute and evaluate the job results
     job = execute(quantum_circuit, quantum_simulator, shots=shots)
     results = job.result()
     counts = results.get_counts(quantum_circuit)
 
-    # # Measure
-    # # Try to run simulator
-    # with local_forest_runtime():
-    #     # assumes that n <= 9
-    #     qvm = get_qc('9q-square-qvm')
-    #     # run circuit and measure the qubits, 10 trials
-    #     results = qvm.run_and_measure(program, trials=10)
-    #     # Iterate through different results of the different trials and check if f(x) = 1
-    #     for i in range(len(results)):
-    #         new = list()
-    #         for j in range(len(results[i])):
-    #             new.append(results[i][j])
-    #         if f(new) == 1: return 1
-    #     # return 0 if simulator fails
-    #     return 0
+    # Parse results and return 1 or 0 accordingly
+    dict = {}
+    for key in counts:
+        if counts[key] >= (shots/(2**n)):
+           dict[key] = counts[key]
+    for key in dict:
+        poop = list(key)
+        poop = [int(i) for i in poop]
+        poop.reverse()
+        if f(poop) == 1:
+            return 1
+    return 0
 
 
 def f(args):
-    return 1
+    return 0
+    # n = len(args)
+    # marked = [0]*(n-1)
+    # marked.append(1)
+    # if(args == marked):
+    #     return 1
     # return 0
     # return x[0]
 
 
-grovers_algorithm(f, 2)
+grovers_algorithm(f, 4, 1024)
