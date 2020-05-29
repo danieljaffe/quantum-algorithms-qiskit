@@ -80,7 +80,7 @@ def get_Zf(f, n):
     return Operator(gate)
 
 
-def grovers_algorithm(f, n, shots=1024, threshold=0.9):
+def grovers_algorithm(f, n, shots=1024):
     """
     This function is intended to determine if there exists an x in {0,1}^n s.t. f(x) = 1 for a given function f s.t.
         f:{0,1}^n -> {0,1}. The algorithm first constructs Zf, -Z0 gates, initializes with Hanamard matrices, and
@@ -143,10 +143,10 @@ def grovers_algorithm(f, n, shots=1024, threshold=0.9):
         if counts[key] >= (shots/(2**n)):
            dict[key] = counts[key]
     for key in dict:
-        poop = list(key)
-        poop = [int(i) for i in poop]
-        poop.reverse()
-        if f(poop) == 1:
+        element = list(key)
+        element = [int(i) for i in element]
+        element.reverse()
+        if f(element) == 1:
             return 1
     return 0
 
