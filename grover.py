@@ -149,7 +149,7 @@ def grovers_algorithm(f, n, shots=1024, token=""):
 
     # Execute and evaluate the job results
     # Run and evaluate the job results
-    job = execute(quantum_circuit, backend, shots=shots)
+    job = execute(quantum_circuit, backend, shots=shots, optimization_level=3)
     if not using_simulator:
         job_monitor(job)
 
@@ -165,8 +165,8 @@ def grovers_algorithm(f, n, shots=1024, token=""):
     # Parse results and return 1 or 0 accordingly
     dict = {}
     for key in counts:
-        if counts[key] >= (shots/(2**n)):
-           dict[key] = counts[key]
+        if counts[key] >= (shots / (2 ** n)):
+            dict[key] = counts[key]
     for key in dict:
         element = list(key)
         element = [int(i) for i in element]
@@ -187,4 +187,4 @@ def f(args):
     # return x[0]
 
 
-grovers_algorithm(f, 4, 1024)
+print(grovers_algorithm(f, 3))

@@ -1,9 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from qiskit import *
 from qiskit.visualization import plot_histogram
 from qiskit.quantum_info.operators import Operator
 from qiskit.tools.monitor import job_monitor
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def apply_H(circuit, apply_to_list):
@@ -126,7 +126,7 @@ def bv_algorithm(f, n, shots=1024, token=""):
     plt.show()
 
     # run circuit and measure qubits
-    job = execute(circuit, backend, shots=shots)
+    job = execute(circuit, backend, shots=shots, optimization_level=3)
     if not using_simulator:
         job_monitor(job)
 
