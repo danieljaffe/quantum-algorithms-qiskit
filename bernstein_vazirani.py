@@ -1,8 +1,7 @@
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from qiskit import *
 from qiskit.visualization import plot_histogram
-from qiskit.circuit import Gate
 from qiskit.quantum_info.operators import Operator
 from qiskit.tools.monitor import job_monitor
 
@@ -39,7 +38,7 @@ def generate_uf(f, n):
     """
     Parameters: f is an anonymous function and n is the number of bits in input: f:{0,1}^n -> {0,1}
     This function returns an oracle gate representing the function f
-        for all x in {0,1}^n and y in {0,1}, the desired result is of the oracle is mapping the input
+        for all x in {0,1}^n and y in {0,1}, the desired result of the oracle is mapping the input
         |x,y> to |x, y + f(x)> where + is addition modulo 2. The function first finds the list of bitstring
         permutations of n bits, it then establishes a mapping which is representative of the decimal number of the
         bitstring represents. It then determines for each |x,y>, it calculates |x, f(x) + y>. Finally it constructs a
@@ -82,7 +81,7 @@ def initialize(states):
     return circuit
 
 
-def bv_algorithm(f, n, token=""):
+def bv_algorithm(f, n, shots=1024, token=""):
     # Account and backend setup
     using_simulator = False
     if token != "":
@@ -122,12 +121,12 @@ def bv_algorithm(f, n, token=""):
     circuit = apply_H(circuit, apply_to_list)
     circuit.measure(range(n), range(n))
 
-    # # draw for verification
-    # circuit.draw('mpl')
-    # plt.show()
+    # Draw the circle
+    circuit.draw('mpl')
+    plt.show()
 
     # run circuit and measure qubits
-    job = execute(circuit, backend, shots=1)
+    job = execute(circuit, backend, shots=shots)
     if not using_simulator:
         job_monitor(job)
 
@@ -140,8 +139,14 @@ def bv_algorithm(f, n, token=""):
     counts = result.get_counts(circuit)
 
     plot_histogram(counts)
+
+    # Will return the key with the highest number of hits. While the simulation will be deterministic,
+    # the any real quantum computer will have errors. This helps to mitigate those errors
+    max = 0
     for count in counts:
-        a = count
+        if max < counts[count]:
+            max = counts[count]
+            a = count
     return a, b
 
 
