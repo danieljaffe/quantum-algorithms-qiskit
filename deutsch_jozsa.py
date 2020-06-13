@@ -151,10 +151,6 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9, token=""):
     if key in counts:
         if counts[key] >= threshold * shots:
             return 1
-    key = '1' * n
-    if key in counts:
-        if counts[key] >= threshold * shots:
-            return 1
 
     # Function is balanced
     return 0
@@ -166,4 +162,4 @@ def f(args):
     return args[0]
 
 
-print(deutsch_jozsa_algorithm(f, 2))
+print(deutsch_jozsa_algorithm(f, 2, threshold=0.7))
