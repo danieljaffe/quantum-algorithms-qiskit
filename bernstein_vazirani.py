@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib as plt
-from qiskit import(
-  QuantumCircuit,
-  execute,
-  Aer)
+from qiskit import (
+    QuantumCircuit,
+    execute,
+    Aer)
 from qiskit.visualization import plot_histogram
 from qiskit.circuit import Gate
 from qiskit.quantum_info.operators import Operator
-
-
+from qiskit.tools.monitor import job_monitor
 
 
 def apply_H(circuit, apply_to_list):
@@ -78,7 +77,7 @@ def initialize(states):
     Note: apply_H isn't called because it is actually more efficient to initialize in one loop as opposed to 2.
     """
     n = len(states)
-    circuit = QuantumCircuit(n, n-1)
+    circuit = QuantumCircuit(n, n - 1)
     for index, state in enumerate(states):
         if state == 1:
             circuit.x(index)
@@ -86,7 +85,23 @@ def initialize(states):
     return circuit
 
 
-def bv_algorithm(f, n):
+def bv_algorithm(f, n, token=""):
+    # Account and backend setup
+    using_simulator = False
+    if token != "":
+        # Sets the IBMQ token
+        IBMQ.save_account(token)
+    try:
+        # Attempts to load IBMQ based on a previously stored token
+        IBMQ.load_account()
+        provider = IBMQ.get_provider('ibm-q')
+        backend = provider.get_backend("ibmq_16_melbourne")
+    except:
+        # Failure loading an IBMQ account will default to simulator usage
+        print("Error in loading IBMQ account. Running simulation instead.")
+        backend = Aer.get_backend('qasm_simulator')
+        using_simulator = True
+
     initialize_list = [0] * n
 
     # calculate b by f(0^n) = b
@@ -108,25 +123,37 @@ def bv_algorithm(f, n):
     apply_to_list = [1] * n
     apply_to_list.append(0)
     circuit = apply_H(circuit, apply_to_list)
-    circuit.measure(range(n),range(n))
+    circuit.measure(range(n), range(n))
 
-    # run simulator and measure qubits
-    simulator = Aer.get_backend("qasm_simulator")
-    job = execute(circuit, simulator, shots=1)
-    result = job.result()
+    # # draw for verification
+    # circuit.draw('mpl')
+    # plt.show()
+
+    # run circuit and measure qubits
+    job = execute(circuit, backend, shots=1)
+    if not using_simulator:
+        job_monitor(job)
+
+    try:
+        result = job.result()
+    except:
+        print(job.error_message())
+        return
     counts = result.get_counts(circuit)
+
     plot_histogram(counts)
     for count in counts:
         a = count
-    return a,b
+    return a, b
+
 
 def f(x):
     n = len(x)
     y = 0
-    for i,x_i in enumerate(x):
-        y = (y + (x_i*(i%2)))%2
-    y = (y+(n%2))%2
-    return(y)
+    for i, x_i in enumerate(x):
+        y = (y + (x_i * (i % 2))) % 2
+    y = (y + (n % 2)) % 2
+    return (y)
 
 
-print(bv_algorithm(f, 6))
+print(bv_algorithm(f, 2))
