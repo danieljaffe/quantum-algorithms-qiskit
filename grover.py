@@ -1,5 +1,6 @@
 from qiskit import *
 from qiskit.quantum_info.operators import Operator
+from qiskit.tools.monitor import job_monitor
 from math import floor, pi, sqrt
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,7 +81,7 @@ def get_Zf(f, n):
     return Operator(gate)
 
 
-def grovers_algorithm(f, n, shots=1024):
+def grovers_algorithm(f, n, shots=1024, token=""):
     """
     This function is intended to determine if there exists an x in {0,1}^n s.t. f(x) = 1 for a given function f s.t.
         f:{0,1}^n -> {0,1}. The algorithm first constructs Zf, -Z0 gates, initializes with Hanamard matrices, and
@@ -93,6 +94,22 @@ def grovers_algorithm(f, n, shots=1024):
         is an issue with the simulator.
     This function uses 9q-squared-qvm, so it assumes that n <= 9
     """
+    # Account and backend setup
+    using_simulator = False
+    if token != "":
+        # Sets the IBMQ token
+        IBMQ.save_account(token)
+    try:
+        # Attempts to load IBMQ based on a previously stored token
+        IBMQ.load_account()
+        provider = IBMQ.get_provider('ibm-q')
+        backend = provider.get_backend("ibmq_16_melbourne")
+    except:
+        # Failure loading an IBMQ account will default to simulator usage
+        print("Error in loading IBMQ account. Running simulation instead.")
+        backend = Aer.get_backend('qasm_simulator')
+        using_simulator = True
+
     # Initialize the circuit and apply Hadamards to all qubits
     quantum_circuit, quantum_register, classical_register = initialize(n)
 
@@ -123,9 +140,7 @@ def grovers_algorithm(f, n, shots=1024):
         for index in range(n):
             quantum_circuit.h(quantum_register[index])
         quantum_circuit.barrier()
-
-    # Run simulator
-    quantum_simulator = Aer.get_backend('qasm_simulator')
+    # Measure
     quantum_circuit.measure(quantum_register[0:n], classical_register)
 
     # Display circuit diagram
@@ -133,8 +148,18 @@ def grovers_algorithm(f, n, shots=1024):
     plt.show()
 
     # Execute and evaluate the job results
-    job = execute(quantum_circuit, quantum_simulator, shots=shots)
-    results = job.result()
+    # Run and evaluate the job results
+    job = execute(quantum_circuit, backend, shots=shots)
+    if not using_simulator:
+        job_monitor(job)
+
+    try:
+        results = job.result()
+    except:
+        print(job.error_message())
+        return
+
+    print("Time taken:", results.time_taken)
     counts = results.get_counts(quantum_circuit)
 
     # Parse results and return 1 or 0 accordingly
