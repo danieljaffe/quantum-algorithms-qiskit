@@ -129,7 +129,7 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9, token=""):
     plt.show()
 
     # Run and evaluate the job results
-    job = execute(quantum_circuit, backend, shots=shots)
+    job = execute(quantum_circuit, backend, shots=shots, optimization_level=3)
     if not using_simulator:
         job_monitor(job)
 
