@@ -1,9 +1,6 @@
 import numpy as np
 import matplotlib as plt
-from qiskit import (
-    QuantumCircuit,
-    execute,
-    Aer)
+from qiskit import *
 from qiskit.visualization import plot_histogram
 from qiskit.circuit import Gate
 from qiskit.quantum_info.operators import Operator
@@ -139,6 +136,7 @@ def bv_algorithm(f, n, token=""):
     except:
         print(job.error_message())
         return
+    print("Time taken:", result.time_taken)
     counts = result.get_counts(circuit)
 
     plot_histogram(counts)
