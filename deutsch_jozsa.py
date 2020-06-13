@@ -1,5 +1,6 @@
 from qiskit import *
 from qiskit.quantum_info.operators import Operator
+from qiskit.tools.monitor import job_monitor
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -72,7 +73,7 @@ def initialize(n):
     return quantum_circuit, quantum_register, classical_register
 
 
-def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9):
+def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9, token=""):
     """
     This function is intended to determine if f is constant or balanced for a given function f s.t.
         f:{0,1}^n -> {0,1}. The algorithm initializes the qubits with H for the first n qubits and X and H for the last
@@ -80,9 +81,31 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9):
         the qubits and applies H to the first n qubits. Finally, the simulator is run on the circuit and measures the
         results. If upon measurement, the first n qubits are all 0, 1 is returned and the function is constant,
         otherwise 0 is returned and the function is balanced.
+
+    UPDATE: This program will now handle running on IBM's quantum computers. A new parameter token is provided which
+            can be used to pass in a user token. If no token is specified, the running machine will attempt to use
+            a previously saved token if one can be found. If no token is found, the program will default to running on
+            the simulator.
+
     This function has an anonymous function and integer n as parameters.
     This function uses 9q-squared-qvm, so it assumes that n <= 9.
     """
+    # Account and backend setup
+    using_simulator = False
+    if token != "":
+        # Sets the IBMQ token
+        IBMQ.save_account(token)
+    try:
+        # Attempts to load IBMQ based on a previously stored token
+        IBMQ.load_account()
+        provider = IBMQ.get_provider('ibm-q')
+        backend = provider.get_backend("ibmq_16_melbourne")
+    except:
+        # Failure loading an IBMQ account will default to simulator usage
+        print("Error in loading IBMQ account. Running simulation instead.")
+        backend = Aer.get_backend('qasm_simulator')
+        using_simulator = True
+
     # apply H to first n qubits and X H to the last qubit (ancilla qubit)
     quantum_circuit, quantum_register, classical_register = initialize(n)
 
@@ -100,15 +123,23 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9):
     for index in range(n):
         quantum_circuit.h(quantum_register[index])
 
-    # Run simulator
-    quantum_simulator = Aer.get_backend('qasm_simulator')
+    # Measure and draw the circuit
     quantum_circuit.measure(quantum_register[0:n], classical_register)
     quantum_circuit.draw('mpl')
     plt.show()
 
-    # Evaluate the job results
-    job = execute(quantum_circuit, quantum_simulator, shots=shots)
-    results = job.result()
+    # Run and evaluate the job results
+    job = execute(quantum_circuit, backend, shots=shots)
+    if not using_simulator:
+        job_monitor(job)
+
+    try:
+        results = job.result()
+    except:
+        print(job.error_message())
+        return
+
+    print("Time taken:", results.time_taken)
     counts = results.get_counts(quantum_circuit)
 
     # NOTE: 1 = constant, 0 = balanced
@@ -131,7 +162,8 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9):
 
 def f(args):
     # return 1
-    return (args[0] + args[1]) % 2
-    # return args[0]
+    # return (args[0] + args[1]) % 2
+    return args[0]
+
 
 print(deutsch_jozsa_algorithm(f, 2))
