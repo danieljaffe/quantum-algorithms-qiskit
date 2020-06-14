@@ -82,6 +82,21 @@ def initialize(states):
 
 
 def bv_algorithm(f, n, shots=1024, token=""):
+    """
+    This function is intended to determine to find a,b s.t. f(x) = a*x + b where a*x is bitwise inner product and +
+        is addition modulo 2, for a given function f s.t. f:{0,1}^n -> {0,1}. It is assumed that f can be represented as
+        f(x) = a*x + b. The algorithm first calculates b by solving for f(0^n). It then initializes the qubits with H
+        for the first n qubits and X and H for the last qubit. The algorithm then constructs a Uf oracle gate based on
+        the function input f. It then applies Uf to all the qubits and applies H to the first n qubits. Finally, the
+        simulator is run on the circuit and measures the results. The function then returns the first n measured qubits.
+    
+    UPDATE: This program will now handle running on IBM's quantum computers. A new parameter token is provided which
+            can be used to pass in a user token. If no token is specified, the running machine will attempt to use
+            a previously saved token if one can be found. If no token is found, the program will default to running on
+            the simulator.
+    
+    This function has an anonymous function and integer n as parameters.
+    """
     # Account and backend setup
     using_simulator = False
     if token != "":
