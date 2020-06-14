@@ -87,12 +87,12 @@ def bv_algorithm(f, n, shots=1024, token=""):
     if token != "":
         # Sets the IBMQ token
         IBMQ.save_account(token)
-    try:
+    if comp != "":
         # Attempts to load IBMQ based on a previously stored token
         IBMQ.load_account()
         provider = IBMQ.get_provider('ibm-q')
         backend = provider.get_backend("ibmq_16_melbourne")
-    except:
+    else:
         # Failure loading an IBMQ account will default to simulator usage
         print("Error in loading IBMQ account. Running simulation instead.")
         backend = Aer.get_backend('qasm_simulator')
@@ -148,15 +148,3 @@ def bv_algorithm(f, n, shots=1024, token=""):
             max = counts[count]
             a = count
     return a, b
-
-
-def f(x):
-    n = len(x)
-    y = 0
-    for i, x_i in enumerate(x):
-        y = (y + (x_i * (i % 2))) % 2
-    y = (y + (n % 2)) % 2
-    return (y)
-
-
-print(bv_algorithm(f, 2))
