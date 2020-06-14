@@ -88,7 +88,6 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9, token=""):
             the simulator.
 
     This function has an anonymous function and integer n as parameters.
-    This function uses 9q-squared-qvm, so it assumes that n <= 9.
     """
     # Account and backend setup
     using_simulator = False
@@ -99,7 +98,7 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9, token=""):
         # Attempts to load IBMQ based on a previously stored token
         IBMQ.load_account()
         provider = IBMQ.get_provider('ibm-q')
-        backend = provider.get_backend("ibmq_16_melbourne")
+        backend = provider.get_backend("ibmq_melbourne")
     except:
         # Failure loading an IBMQ account will default to simulator usage
         print("Error in loading IBMQ account. Running simulation instead.")
@@ -157,9 +156,12 @@ def deutsch_jozsa_algorithm(f, n, shots=1024, threshold=0.9, token=""):
 
 
 def f(args):
-    # return 1
-    # return (args[0] + args[1]) % 2
-    return args[0]
+    # TODO Constant Functions
+    return 1  # Expected result: 1
+
+    # TODO Balanced Functions
+    # return args[0] # Expected result: 0
 
 
-print(deutsch_jozsa_algorithm(f, 2, threshold=0.7))
+for x in range(4):
+    print(deutsch_jozsa_algorithm(f, 1))

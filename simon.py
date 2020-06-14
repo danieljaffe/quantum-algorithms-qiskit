@@ -1,9 +1,14 @@
+from qiskit import QuantumCircuit, execute, Aer, IBMQ
+from qiskit.compiler import transpile, assemble
+# from qiskit.tools.jupyter import *
+# from qiskit.visualization import *
 import numpy as np
 from qiskit import *
 from qiskit.visualization import plot_histogram
 import matplotlib.pyplot as plt
 from qiskit import Aer
 from qiskit.quantum_info.operators import Operator
+from qiskit.tools.monitor import job_monitor
 import time
 
 
@@ -92,20 +97,37 @@ def simons_solver(Y, n):
     return [0] * n
 
 
-def simons_algorithm(f, n):
+def simons_algorithm(f, n, token="", factor=1):
     """
     Inputs: f is a blackbox function (f:{0,1}^n -> {0,1}^n) that is either one-to-one or two-to-one. n is the
-    dimension of the input into f. This function finds and returns the key s, if one exists, for a two-to-one
+    dimension of the input into f. This function finds and returns the key s, if one exists, for a two-to-one.
+    token is a unique code token referencing a ibm account. token is needed to run on a real quantum computer.
+    If no token is passed as a parameter, then i
+    factor is intended to adjust the number of trials to be executed
     function by first creating a matrix U_f that represents f, then applying the appropriate quantum gates to
     generate a linear equation. By running the circuit until we generate n-1 unique equations, the set of equations can solve for s. The Classical solver returns s.
     Returns: the key string s, if found, or the zero bitstring
     """
+    # Account and backend setup
+    using_simulator = False
+    if token != "":
+        # Sets the IBMQ token
+        IBMQ.save_account(token)
+    try:
+        # Attempts to load IBMQ based on a previously stored token
+        IBMQ.load_account()
+        provider = IBMQ.get_provider('ibm-q')
+        backend = provider.get_backend("ibmq_16_melbourne")
+    except:
+        # Failure loading an IBMQ account will default to simulator usage
+        print("Error in loading IBMQ account. Running simulation instead.")
+        backend = Aer.get_backend('qasm_simulator')
+        using_simulator = True
+
     # Generate the oracle gate
     oracle = generate_uf_simons(f, n)
     # Initialize the circuit
     circuit = QuantumCircuit(2 * n, 2 * n)
-    # initialize the simulator, use qasm_simulator
-    simulator = Aer.get_backend("qasm_simulator")
     indices = list(range(2 * n))
     indices.reverse()
     # apply Hadamards to first n qubits
@@ -122,21 +144,32 @@ def simons_algorithm(f, n):
     #    circuit.draw('mpl')
     #    plt.show()
     # Run the entire process 20 times
-    for i in range(20):
+    for i in range(20 * factor):
         s = set()
         s_trials = []
         # Run quantum circuit until at least n-1 unique eqautions are obtained
         while (len(s) < n - 1):
-            job = execute(circuit, simulator, shots=1)
-            result = job.result()
+            # Run and evaluate the job results
+            job = execute(circuit, backend, shots=n - 1, optimization_level=3)
+            if not using_simulator:
+                job_monitor(job)
+            try:
+                result = job.result()
+            except:
+                print(job.error_message())
+                return
+            print(result.time_taken)
             counts = result.get_counts()
             for count in counts:
                 s.add(count[2 * n:n - 1:-1])
+                if len(s) == n - 1:
+                    break
         for bitstring in s:
             s_trials.append([int(bit) for bit in bitstring])
         s_trials = np.array(s_trials)
         # Solve system of equations
         val = simons_solver(s_trials, n)
+        # if s = 0^n , skip check
         if val == [0] * n:
             continue
         # if the correct function value is found, no need to keep searching
@@ -145,3 +178,10 @@ def simons_algorithm(f, n):
             return val
     # s not found, return 0 bit string
     return [0] * n
+
+
+def f(args):
+    return args
+
+
+print(simons_algorithm(f, 2))
